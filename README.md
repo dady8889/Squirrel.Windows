@@ -1,5 +1,7 @@
 This is a fork repo of [Squirrel.Windows](https://github.com/Squirrel/Squirrel.Windows)
 
+[![Build Status](https://dev.azure.com/xy1996mail/Squirrel.Windows/_apis/build/status/Goxiaoy.Squirrel.Windows?branchName=develop)](https://dev.azure.com/xy1996mail/Squirrel.Windows/_build/latest?definitionId=1&branchName=develop)
+
 I want to use Squirrel for my unity project. But there are some issues in unity mono environment. So I dive into the source code and github issues and finally integrate Squirrel into my unity project.
 
 Changes:

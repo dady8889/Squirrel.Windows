@@ -1,59 +1,58 @@
-| README.md |
-|:---|
+This is a fork repo of [Squirrel.Windows](https://github.com/Squirrel/Squirrel.Windows)
 
-# Contributors Needed
+I want to use Squirrel for my unity project. But there are some issues in unity mono environment. So I dive into the source code and github issues and finally integrate Squirrel into my unity project.
 
-We are looking for help with maintaining this important project - please read the discussion in [#1470](https://github.com/Squirrel/Squirrel.Windows/issues/1470) for more information.
+Changes:
 
----
+- Remove dependency of Splat in Squirrel project and copy source code of Splat to fix compile
+- Add Wrapper exe to fix issues [#414](https://github.com/Squirrel/Squirrel.Windows/issues/414) [#1266](https://github.com/Squirrel/Squirrel.Windows/issues/1266)
+- Change bsdiff to VCdiff to fix [#651](https://github.com/Squirrel/Squirrel.Windows/issues/651)
+  
 
-# Squirrel: It's like ClickOnce but Works™
-
-![](docs/artwork/Squirrel-Logo.png)
-
-[![Build Status](https://dev.azure.com/squirrel-installers/Squirrel.Windows/_apis/build/status/Squirrel.Squirrel.Windows?branchName=master)](https://dev.azure.com/squirrel-installers/Squirrel.Windows/_build/latest?definitionId=1&branchName=master)
-
-Squirrel is both a set of tools and a library, to completely manage both installation and updating your Desktop Windows application, written in either C# or any other language (i.e., Squirrel can manage native C++ applications).
-
-Squirrel uses NuGet packages to create installation and update packages, which means that you probably already know most of what you need to create an installer.
-
-## What Do We Want?
-
-Windows apps should be as fast and as easy to install and update as apps like Google Chrome. From an app developer's side, it should be really straightforward to create an installer for my app, and publish updates to it, without having to jump through insane hoops. 
-
-* **Integrating** an app to use Squirrel should be extremely easy, provide a client API, and be developer friendly.
-* **Packaging** is really easy, can be automated, and supports delta update packages.
-* **Distributing** should be straightforward, use simple HTTP updates, and provide multiple "channels" (a-la Chrome Dev/Beta/Release).
-* **Installing** is Wizard-Free™, with no UAC dialogs, does not require reboot, and is .NET Framework friendly.
-* **Updating** is in the background, doesn't interrupt the user, and does not require a reboot.
-
-Refer to our full list of goals for [integrating, packaging, distributing, installing, and updating](docs/goals.md).
-
-## Documentation
-
-See the documentation [Table of Contents](docs/readme.md) for an overview of the available documentation for Squirrel.Windows. It includes a [Getting Started Guide](docs/getting-started/0-overview.md) as well as additional topics related to using Squirrel in your applications. 
-
-## Building Squirrel
-For the impatient:
-
-```sh
-git clone --recursive https://github.com/squirrel/squirrel.windows
-cd squirrel.windows
-.\.NuGet\NuGet.exe restore
-msbuild /p:Configuration=Release
-```
-See [Contributing](docs/contributing/contributing.md) for additional information on building and contributing to Squirrel.
+Workflow:
+- Unity build standalone 
+- Rename `yourprojectname_Data/Resources/unity default resources` to `yourprojectname_Data/Resources/unity%20default%20resources`
+- Copy the unity build files and Squirrel.UnityWrapper build files to the folder `lib/net45/` 
+- Create your .nuspec file
+- Generate your .nupkg file 
+  ```
+  ./nuget.exe pack <yourproject.nuspec> -Version <your version number> -BasePath <path> -OutputDirectory <path>
+  ```
+- Pack
+  ```
+  ./Squirrel.exe --releasify <yourproject>.<your version number>.nupkg
+  ```
 
 
-## License and Usage
+Problems:
+- SSL: if your server use ssl, you should run codes before any web request
+  
+  ```
+  ServicePointManager.ServerCertificateValidationCallback = MyRemoteCertificateValidationCallback;
+ 
+ ```
+    public bool MyRemoteCertificateValidationCallback(System.Object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) {
+        bool isOk = true;
+        // If there are errors in the certificate chain, look at each error to determine the cause.
+        if (sslPolicyErrors != SslPolicyErrors.None) {
+            for(int i=0; i<chain.ChainStatus.Length; i++) {
+                if(chain.ChainStatus[i].Status != X509ChainStatusFlags.RevocationStatusUnknown) {
+                    chain.ChainPolicy.RevocationFlag = X509RevocationFlag.EntireChain;
+                    chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
+                    chain.ChainPolicy.UrlRetrievalTimeout = new TimeSpan(0, 1, 0);
+                    chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllFlags;
+                    bool chainIsValid = chain.Build((X509Certificate2)certificate);
+                    if(!chainIsValid) {
+                        isOk = false;
+                    }
+                }
+            }
+        }
+        return isOk;
+    }
+  ```
 
-See [COPYING](COPYING) for details on copyright and usage of the Squirrel.Windows software.
-
-
-
-
-
-
-
-
-
+Reference:
+- https://github.com/Squirrel/Squirrel.Windows/issues/1266#issuecomment-399479349
+- https://stackoverflow.com/questions/30109214/is-it-possible-to-package-and-deploy-a-unity3d-app-using-squirrel-for-windows-in
+- https://answers.unity.com/questions/792342/how-to-validate-ssl-certificates-when-using-httpwe.html

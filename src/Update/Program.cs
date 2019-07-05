@@ -841,6 +841,40 @@ namespace Squirrel.Update
             lock (gate) inner.WriteLine($"[{DateTime.Now.ToString("dd/MM/yy HH:mm:ss")}] {logLevel.ToString().ToLower()}: {message}");
         }
 
+        /// <summary>
+        /// Writes a message to the target.
+        /// </summary>
+        /// <param name="exception">The exception that occured.</param>
+        /// <param name="message">The message to write.</param>
+        /// <param name="logLevel">The severity level of the log message.</param>
+        public void Write(Exception exception, string message, LogLevel logLevel)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Writes a messge to the target.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="logLevel">The log level.</param>
+        public void Write(string message, Type type, LogLevel logLevel)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Writes a messge to the target.
+        /// </summary>
+        /// <param name="exception">The exception that occured.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="logLevel">The log level.</param>
+        public void Write(Exception exception, string message, Type type, LogLevel logLevel)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Dispose()
         {
             lock (gate) {

@@ -31,9 +31,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
-    <Reference Include="WpfAnimatedGif, Version=1.4.15.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\WpfAnimatedGif.1.4.15\lib\net\WpfAnimatedGif.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -42,11 +39,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="WpfAnimatedGif" Version="1.4.15.0" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="ILRepack" Version="1.26.0" PrivateAssets="All" />
+    <PackageReference Include="WpfAnimatedGif" Version="1.4.18" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

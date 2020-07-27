@@ -39,8 +39,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="WpfAnimatedGif" Version="1.4.15.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ILRepack" Version="1.26.0" PrivateAssets="All" />
     <PackageReference Include="WpfAnimatedGif" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Nerdbank.GitVersioning" Version="3.0.50" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

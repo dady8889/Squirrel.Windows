@@ -29,10 +29,10 @@ namespace Squirrel
 
             public async Task<string> ApplyReleases(UpdateInfo updateInfo, bool silentInstall, bool attemptingFullInstall, Action<int> progress = null)
             {
-                progress = progress ?? (_ => { });
+                progress ??= (_ => { });
 
                 progress(0);
-                var release = await createFullPackagesFromDeltas(updateInfo.ReleasesToApply, updateInfo.CurrentlyInstalledVersion);
+                var release = updateInfo.ReleasesToApply.MaxBy(x => x.Version).FirstOrDefault();
                 progress(10);
 
                 if (release == null) {
@@ -301,46 +301,6 @@ namespace Squirrel
 
                     return target.FullName;
                 });
-            }
-
-            async Task<ReleaseEntry> createFullPackagesFromDeltas(IEnumerable<ReleaseEntry> releasesToApply, ReleaseEntry currentVersion)
-            {
-                Contract.Requires(releasesToApply != null);
-
-                // If there are no remote releases at all, bail
-                if (!releasesToApply.Any()) {
-                    return null;
-                }
-
-                // If there are no deltas in our list, we're already done
-                if (releasesToApply.All(x => !x.IsDelta)) {
-                    return releasesToApply.MaxBy(x => x.Version).FirstOrDefault();
-                }
-
-                if (!releasesToApply.All(x => x.IsDelta)) {
-                    throw new Exception("Cannot apply combinations of delta and full packages");
-                }
-
-                // Smash together our base full package and the nearest delta
-                var ret = await Task.Run(() => {
-                    var basePkg = new ReleasePackage(Path.Combine(rootAppDirectory, "packages", currentVersion.Filename));
-                    var deltaPkg = new ReleasePackage(Path.Combine(rootAppDirectory, "packages", releasesToApply.First().Filename));
-
-                    var deltaBuilder = new DeltaPackageBuilder(Directory.GetParent(this.rootAppDirectory).FullName);
-
-                    return deltaBuilder.ApplyDeltaPackage(basePkg, deltaPkg,
-                        Regex.Replace(deltaPkg.InputPackageFile, @"-delta.nupkg$", ".nupkg", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
-                });
-
-                if (releasesToApply.Count() == 1) {
-                    return ReleaseEntry.GenerateFromFile(ret.InputPackageFile);
-                }
-
-                var fi = new FileInfo(ret.InputPackageFile);
-                var entry = ReleaseEntry.GenerateFromFile(fi.OpenRead(), fi.Name);
-
-                // Recursively combine the rest of them
-                return await createFullPackagesFromDeltas(releasesToApply.Skip(1), entry);
             }
 
             void executeSelfUpdate(SemanticVersion currentVersion)

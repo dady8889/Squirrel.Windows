@@ -3,7 +3,7 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <TargetFramework>net45</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>WinExe</OutputType>
     <Description>Update</Description>
     <Title>Update</Title>
@@ -40,7 +40,7 @@
 
   <ItemGroup>
     <PackageReference Include="ILRepack" Version="1.26.0" PrivateAssets="All" />
-    <PackageReference Include="WpfAnimatedGif" Version="1.4.18" />
+    <PackageReference Include="WpfAnimatedGif" Version="2.0.0" />
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

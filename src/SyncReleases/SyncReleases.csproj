@@ -3,7 +3,7 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <TargetFramework>net45</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <OutputType>Exe</OutputType>
     <Description>SyncReleases</Description>
     <Title>SyncReleases</Title>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Octokit" Version="0.10.0.0" />
+    <PackageReference Include="Octokit" Version="0.48.0" />
   </ItemGroup>
 
   <ItemGroup>

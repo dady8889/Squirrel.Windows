@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NuGet;
-using Splat;
+using Squirrel.SimpleSplat;
 using System.Threading;
 using Squirrel.Shell;
 using Microsoft.Win32;
@@ -32,8 +32,11 @@ namespace Squirrel
                 progress = progress ?? (_ => { });
 
                 progress(0);
-                var release = await createFullPackagesFromDeltas(updateInfo.ReleasesToApply, updateInfo.CurrentlyInstalledVersion);
-                progress(10);
+
+                // Progress range: 00 -> 40
+                var release = await createFullPackagesFromDeltas(updateInfo.ReleasesToApply, updateInfo.CurrentlyInstalledVersion, new ApplyReleasesProgress(updateInfo.ReleasesToApply.Count, x => progress(CalculateProgress(x, 0, 40))));
+
+                progress(40);
 
                 if (release == null) {
                     if (attemptingFullInstall) {
@@ -45,23 +48,32 @@ namespace Squirrel
                     return getDirectoryForRelease(updateInfo.CurrentlyInstalledVersion.Version).FullName;
                 }
 
-                var ret = await this.ErrorIfThrows(() => installPackageToAppDir(updateInfo, release), 
+                // Progress range: 40 -> 80
+                var ret = await this.ErrorIfThrows(() => installPackageToAppDir(updateInfo, release, x => progress(CalculateProgress(x, 40, 80))), 
                     "Failed to install package to app dir");
-                progress(30);
+
+                progress(80);
 
                 var currentReleases = await this.ErrorIfThrows(() => updateLocalReleasesFile(),
                     "Failed to update local releases file");
-                progress(50);
+
+                progress(85);
 
                 var newVersion = currentReleases.MaxBy(x => x.Version).First().Version;
                 executeSelfUpdate(newVersion);
 
+                progress(90);
+
                 await this.ErrorIfThrows(() => invokePostInstall(newVersion, attemptingFullInstall, false, silentInstall),
                     "Failed to invoke post-install");
-                progress(75);
+
+                progress(95);
 
                 this.Log().Info("Starting fixPinnedExecutables");
+
                 this.ErrorIfThrows(() => fixPinnedExecutables(updateInfo.FutureReleaseEntry.Version));
+
+                progress(96);
 
                 this.Log().Info("Fixing up tray icons");
 
@@ -70,10 +82,12 @@ namespace Squirrel
                 var allExes = appDir.GetFiles("*.exe").Select(x => x.Name).ToList();
 
                 this.ErrorIfThrows(() => trayFixer.RemoveDeadEntries(allExes, rootAppDirectory, updateInfo.FutureReleaseEntry.Version.ToString()));
-                progress(80);
+
+                progress(97);
 
                 unshimOurselves();
-                progress(85);
+
+                progress(98);
 
                 try {
                     var currentVersion = updateInfo.CurrentlyInstalledVersion != null ?
@@ -83,6 +97,7 @@ namespace Squirrel
                 } catch (Exception ex) {
                     this.Log().WarnException("Failed to clean dead versions, continuing anyways", ex);
                 }
+
                 progress(100);
 
                 return ret;
@@ -280,7 +295,7 @@ namespace Squirrel
                 fixPinnedExecutables(zf.Version);
             }
 
-            Task<string> installPackageToAppDir(UpdateInfo updateInfo, ReleaseEntry release)
+            Task<string> installPackageToAppDir(UpdateInfo updateInfo, ReleaseEntry release, Action<int> progressCallback)
             {
                 return Task.Run(async () => {
                     var target = getDirectoryForRelease(release.Version);
@@ -297,15 +312,18 @@ namespace Squirrel
                     await ReleasePackage.ExtractZipForInstall(
                         Path.Combine(updateInfo.PackageDirectory, release.Filename),
                         target.FullName,
-                        rootAppDirectory);
+                        rootAppDirectory,
+                        progressCallback);
 
                     return target.FullName;
                 });
             }
 
-            async Task<ReleaseEntry> createFullPackagesFromDeltas(IEnumerable<ReleaseEntry> releasesToApply, ReleaseEntry currentVersion)
+            async Task<ReleaseEntry> createFullPackagesFromDeltas(IEnumerable<ReleaseEntry> releasesToApply, ReleaseEntry currentVersion, ApplyReleasesProgress progress)
             {
                 Contract.Requires(releasesToApply != null);
+
+                progress = progress ?? new ApplyReleasesProgress(releasesToApply.Count(), x => { });
 
                 // If there are no remote releases at all, bail
                 if (!releasesToApply.Any()) {
@@ -321,6 +339,16 @@ namespace Squirrel
                     throw new Exception("Cannot apply combinations of delta and full packages");
                 }
 
+                // Progress calculation is "complex" here. We need to known how many releases, and then give each release a similar amount of
+                // progress. For example, when applying 5 releases:
+                //
+                // release 1: 00 => 20
+                // release 2: 20 => 40
+                // release 3: 40 => 60
+                // release 4: 60 => 80
+                // release 5: 80 => 100
+                // 
+
                 // Smash together our base full package and the nearest delta
                 var ret = await Task.Run(() => {
                     var basePkg = new ReleasePackage(Path.Combine(rootAppDirectory, "packages", currentVersion.Filename));
@@ -329,8 +357,11 @@ namespace Squirrel
                     var deltaBuilder = new DeltaPackageBuilder(Directory.GetParent(this.rootAppDirectory).FullName);
 
                     return deltaBuilder.ApplyDeltaPackage(basePkg, deltaPkg,
-                        Regex.Replace(deltaPkg.InputPackageFile, @"-delta.nupkg$", ".nupkg", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+                        Regex.Replace(deltaPkg.InputPackageFile, @"-delta.nupkg$", ".nupkg", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
+                        x => progress.ReportReleaseProgress(x));
                 });
+
+                progress.FinishRelease();
 
                 if (releasesToApply.Count() == 1) {
                     return ReleaseEntry.GenerateFromFile(ret.InputPackageFile);
@@ -340,7 +371,7 @@ namespace Squirrel
                 var entry = ReleaseEntry.GenerateFromFile(fi.OpenRead(), fi.Name);
 
                 // Recursively combine the rest of them
-                return await createFullPackagesFromDeltas(releasesToApply.Skip(1), entry);
+                return await createFullPackagesFromDeltas(releasesToApply.Skip(1), entry, progress);
             }
 
             void executeSelfUpdate(SemanticVersion currentVersion)
@@ -436,7 +467,7 @@ namespace Squirrel
 
                 var resolveLink = new Func<FileInfo, ShellLink>(file => {
                     try {
-                        this.Log().Info("Examining Pin: " + file);
+                        this.Log().Debug("Examining Pin: " + file);
                         return new ShellLink(file.FullName);
                     } catch (Exception ex) {
                         var message = String.Format("File '{0}' could not be converted into a valid ShellLink", file.FullName);
